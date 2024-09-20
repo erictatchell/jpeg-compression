@@ -8,6 +8,7 @@ package main
 import (
 	"fmt"
 	"image"
+	"image/png"
 	"os"
 )
 
@@ -62,7 +63,19 @@ func openImageFromPath(imagePath string) (image.Image, error) {
 	}
 	defer imageFile.Close()
 	image, _, err := image.Decode(imageFile)
-	return image, err
+	if err != nil {
+		fmt.Println("Generic decoding failed -- trying PNG")
+	} else {
+		return image, err
+	}
+	imageFile.Seek(0, 0)
+
+	loadedImage, err := png.Decode(imageFile)
+	if err != nil {
+		fmt.Println("Unable to decode the image. Try a different file?")
+	}
+
+	return loadedImage, err
 
 }
 
@@ -76,14 +89,14 @@ func convertRGBtoYCbCr(image image.Image) []byte {
 	Y := make([][]float64, height)
 	Cb := make([][]float64, height)
 	Cr := make([][]float64, height)
-	for i := range height {
+	for i := range Y {
 		Y[i] = make([]float64, width)
 		Cb[i] = make([]float64, width)
 		Cr[i] = make([]float64, width)
 	}
 
-	for y := range height {
-		for x := range width {
+	for y := range width {
+		for x := range height {
 			color := image.At(x, y)
 			r, g, b, _ := color.RGBA()
 			Y[x][y] = RGBtoYCbCr[0][0]*float64(r) +
@@ -100,19 +113,31 @@ func convertRGBtoYCbCr(image image.Image) []byte {
 		}
 	}
 
+	ChromaSubsample(width, height, &Cb)
+	ChromaSubsample(width, height, &Cr)
 	return ycbcr
 }
 
+func ChromaSubsample(width int, height int, channel *[][]float64) {
+	temp := make([][]float64, height/2)
+	for i := range temp {
+		temp[i] = make([]float64, width)
+	}
+	for y := range width / 2 {
+		for x := range height / 2 {
+			temp[x][y] = (*channel)[x*2][y*2]
+		}
+	}
+	*channel = temp
+}
+
 func main() {
-	var jpegImage JPEGImage = JPEGImage{}
+	//	var jpegImage JPEGImage = JPEGImage{}
 	var imagePath string = os.Args[1]
 	image, err := openImageFromPath(imagePath)
 	if err != nil {
 		fmt.Println("Error opening/decoding the image file.")
 		os.Exit(1)
 	}
-	jpegImage.origImage = image
-	jpegImage.ycbcr = convertRGBtoYCbCr(image)
-
-	fmt.Println(imagePath)
+	convertRGBtoYCbCr(image)
 }
