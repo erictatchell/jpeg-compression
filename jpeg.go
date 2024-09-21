@@ -5,7 +5,6 @@ package main
 // for DCT blocks we are using 8x8
 
 import (
-	"fmt"
 	"image"
 )
 
@@ -20,15 +19,15 @@ func ConvertRGBToYCbCr(image image.Image, Y *[][]float64, Cb *[][]float64, Cr *[
 			r, g, b, _ := color.RGBA()
 
 			// these formulas are from my multimedia textbook i cant remember which one oops
-			(*Y)[x][y] = RGBtoYCbCr[0][0]*float64(r) +
+			(*Y)[y][x] = RGBtoYCbCr[0][0]*float64(r) +
 				RGBtoYCbCr[0][1]*float64(g) +
 				RGBtoYCbCr[0][2]*float64(b)
 
-			(*Cb)[x][y] = RGBtoYCbCr[1][0]*float64(r) +
+			(*Cb)[y][x] = RGBtoYCbCr[1][0]*float64(r) +
 				RGBtoYCbCr[1][1]*float64(g) +
 				RGBtoYCbCr[1][2]*float64(b) + 128
 
-			(*Cr)[x][y] = RGBtoYCbCr[2][0]*float64(r) +
+			(*Cr)[y][x] = RGBtoYCbCr[2][0]*float64(r) +
 				RGBtoYCbCr[2][1]*float64(g) +
 				RGBtoYCbCr[2][2]*float64(b) + 128
 		}
@@ -83,7 +82,12 @@ func GetByteArray(image image.Image) []byte {
 
 	var blocks []Block = GetBlocks(ycbcr)
 
-	fmt.Printf("%d", len(blocks))
+	// this is just so beautiful i love Go
+	for _, block := range blocks {
+		if len(block.Matrix) != 0 {
+			DCT(&block.Matrix)
+		}
+	}
 
 	return ycbcr
 }
@@ -142,7 +146,7 @@ func PutChannelInByteArray(i *int, width int, height int, channel *[][]float64, 
 	for y := range height {
 		for x := range width {
 			// kill me
-			(*ycbcr)[*i] = byte((*channel)[x][y])
+			(*ycbcr)[*i] = byte((*channel)[y][x])
 			*i++
 		}
 	}

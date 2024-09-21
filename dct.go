@@ -10,7 +10,7 @@ func C(x int) float64 {
 	}
 }
 
-func DCT(F [][]float64) [][]float64 {
+func DCT(F *[][]float64) [][]float64 {
 	result := make([][]float64, 8)
 	for i := range 8 {
 		result[i] = make([]float64, 8)
@@ -20,7 +20,7 @@ func DCT(F [][]float64) [][]float64 {
 			var sum float64 = 0
 			for x := range 8 {
 				for y := range 8 {
-					sum += math.Cos((float64(2*x+1)*float64(u)*math.Pi)/(2*8)) * math.Cos((float64(2*y+1)*float64(v)*math.Pi)/(2*8)) * F[x][y]
+					sum += math.Cos((float64(2*x+1)*float64(u)*math.Pi)/(2*8)) * math.Cos((float64(2*y+1)*float64(v)*math.Pi)/(2*8)) * (*F)[x][y]
 				}
 			}
 			sum *= C(u) * C(v) * 0.25 // this is usually (2 / math.Sqrt(n * m)) but its always 8x8 blocks
