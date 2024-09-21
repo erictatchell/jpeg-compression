@@ -11,10 +11,7 @@ func C(x int) float64 {
 }
 
 func DCT(F *[][]float64) [][]float64 {
-	result := make([][]float64, 8)
-	for i := range 8 {
-		result[i] = make([]float64, 8)
-	}
+	var result *Block = createEmptyBlock()
 	for u := range 8 {
 		for v := range 8 {
 			var sum float64 = 0
@@ -24,10 +21,10 @@ func DCT(F *[][]float64) [][]float64 {
 				}
 			}
 			sum *= C(u) * C(v) * 0.25 // this is usually (2 / math.Sqrt(n * m)) but its always 8x8 blocks
-			result[u][v] = sum
+			*result[u][v] = sum
 		}
 	}
-	return result
+	return *result
 }
 
 func IDCT(H [][]float64) [][]float64 {
