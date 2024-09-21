@@ -51,7 +51,7 @@ func main() {
 		fmt.Println("Error opening/decoding the image file.")
 		os.Exit(1)
 	}
-	var ycbcr []byte = convertRGBtoYCbCr(image)
+	var ycbcr []byte = GetByteArray(image)
 	err = os.WriteFile("test.eric", ycbcr, 0644)
 	check(err)
 }
