@@ -24,7 +24,7 @@ func openImageFromPath(imagePath string) (image.Image, error) {
 	if err != nil {
 		fmt.Println("Generic decoding failed -- trying PNG")
 	} else {
-		return image, err
+		return image, nil
 	}
 	imageFile.Seek(0, 0)
 
@@ -51,7 +51,10 @@ func main() {
 		fmt.Println("Error opening/decoding the image file.")
 		os.Exit(1)
 	}
-	var ycbcr []byte = GetByteArray(image)
+	ycbcr, err := GetByteArray(image)
+	if err != nil {
+
+	}
 	err = os.WriteFile("test.eric", ycbcr, 0644)
 	check(err)
 }

@@ -5,6 +5,7 @@ package main
 // for DCT blocks we are using 8x8
 
 import (
+	"fmt"
 	"image"
 )
 
@@ -36,9 +37,14 @@ func ConvertRGBToYCbCr(image image.Image, Y *[][]float64, Cb *[][]float64, Cr *[
 
 // the array that is generated is laid out as follows:
 // [width, height, Y, Y, Y, Y, .... Cb, Cb, Cb, Cb, .... Cr, Cr, Cr, Cr]
-func GetByteArray(image image.Image) []byte {
+func GetByteArray(image image.Image) ([]byte, error) {
+	var error error
 	var width int = image.Bounds().Dx()
 	var height int = image.Bounds().Dy()
+	if width == 0 || height == 0 {
+		fmt.Println("Invalid image: height or width is 0.")
+		return nil, error
+	}
 
 	numPixels := width * height
 
@@ -89,7 +95,7 @@ func GetByteArray(image image.Image) []byte {
 		}
 	}
 
-	return ycbcr
+	return ycbcr, nil
 }
 
 type Block struct {
@@ -143,6 +149,7 @@ func GetBlock(i *int, ycbcr []byte, channel string) Block {
 }
 
 func PutChannelInByteArray(i *int, width int, height int, channel *[][]float64, ycbcr *[]byte) {
+	var error error
 	for y := range height {
 		for x := range width {
 			// kill me
