@@ -1,8 +1,8 @@
 package main
 
-// jpeg.go
+// compress.go
 // author: Eric Tatchell
-// for DCT blocks we are using 8x8
+// rle and huffman
 
 import (
 	"fmt"
@@ -16,21 +16,21 @@ func ConvertRGBToYCbCr(image image.Image, Y *[][]float64, Cb *[][]float64, Cr *[
 
 	// go across the whole image
 	fmt.Println("Starting YCbCr conversion...")
-	for r := range height {
-		for c := range width {
-			color := image.At(r, c)
+	for y := range height {
+		for x := range width {
+			color := image.At(x, y)
 			r, g, b, _ := color.RGBA()
 
 			// these formulas are from my multimedia textbook i cant remember which one oops
-			(*Y)[r][c] = RGBtoYCbCr[0][0]*float64(r) +
+			(*Y)[y][x] = RGBtoYCbCr[0][0]*float64(r) +
 				RGBtoYCbCr[0][1]*float64(g) +
 				RGBtoYCbCr[0][2]*float64(b)
 
-			(*Cb)[r][c] = RGBtoYCbCr[1][0]*float64(r) +
+			(*Cb)[y][x] = RGBtoYCbCr[1][0]*float64(r) +
 				RGBtoYCbCr[1][1]*float64(g) +
 				RGBtoYCbCr[1][2]*float64(b) + 128
 
-			(*Cr)[r][c] = RGBtoYCbCr[2][0]*float64(r) +
+			(*Cr)[y][x] = RGBtoYCbCr[2][0]*float64(r) +
 				RGBtoYCbCr[2][1]*float64(g) +
 				RGBtoYCbCr[2][2]*float64(b) + 128
 		}
@@ -88,7 +88,9 @@ func GetByteArray(image image.Image) ([]byte, error) {
 	PutChannelInByteArray(&i, width/2, height/2, &Cr, &ycbcr)
 	fmt.Println("Filled the byte array")
 
-	var blocks []Block = GetBlocks(ycbcr)
+	var yblocks []Block = GetBlocks("Y", ycbcr)
+	var cbcrblocks []Block = GetBlocks("CbCr", ycbcr)
+	var blocks []Block = append(yblocks, cbcrblocks...)
 
 	// this is just so beautiful i love Go
 	fmt.Println("Starting DCT and Quantization")
@@ -96,6 +98,7 @@ func GetByteArray(image image.Image) ([]byte, error) {
 		if len(block.Matrix) != 0 {
 			DCT(&block.Matrix)
 			Quantize(block.channel, &block.Matrix)
+			fmt.Println(block.Matrix)
 		}
 	}
 
@@ -109,50 +112,10 @@ func Quantize(channel string, block *[][]float64) {
 			if channel == "Y" {
 				(*block)[r][c] = math.Round((*block)[r][c] / Luminance[r][c])
 			} else {
-				(*block)[r][c] = math.Round((*block)[x][y] / Chrominance[r][c])
+				(*block)[r][c] = math.Round((*block)[r][c] / Chrominance[r][c])
 			}
 		}
 	}
-}
-
-func GetBlocks(ycbcr []byte) []Block {
-	// 4 for the width/height, / 64 for block size
-	size := int((len(ycbcr))/64 + 4)
-	fmt.Printf("Creating %d 8x8 blocks from the byte array\n", size)
-
-	var blocks = make([]Block, size)
-	i := 4
-	for j := range blocks {
-		blocks[j] = GetBlock(&i, ycbcr, "Y")
-	}
-
-	fmt.Println("Finished creating blocks")
-	return blocks
-}
-
-func GetBlock(i *int, ycbcr []byte, channel string) Block {
-	// this weird bitshift stuff is left over logic from the original C# version
-	// it was definitely ChatGPT
-	// we are keeping it until i figure out another way to do this (never)
-	width := int(ycbcr[0]<<8 | ycbcr[1])
-	height := int(ycbcr[2]<<8 | ycbcr[3])
-	size := width * height
-
-	var block *Block = createEmptyBlock(channel)
-
-	for r := range 8 {
-		for c := range 8 {
-			if (*i) >= len(ycbcr) || ((*i) >= size && channel == "Y") {
-				block.Matrix[r][c] = 0
-			} else { // cbcr
-				// 99% sure this conversion from byte to float64 doesn't work but we'll find out later.!!
-				block.Matrix[r][c] = float64(ycbcr[(*i)])
-				(*i)++
-			}
-		}
-	}
-
-	return *block
 }
 
 func PutChannelInByteArray(i *int, width int, height int, channel *[][]float64, ycbcr *[]byte) {
