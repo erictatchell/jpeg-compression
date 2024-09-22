@@ -12,7 +12,7 @@ func C(x int) float64 {
 
 // todo: test this
 func DCT(F *[][]float64) [][]float64 {
-	var result *Block = createEmptyBlock()
+	var result *Block = createEmptyBlock("")
 	for u := range 8 {
 		for v := range 8 {
 			var sum float64 = 0

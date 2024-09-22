@@ -7,6 +7,7 @@ package main
 import (
 	"fmt"
 	"image"
+	"math"
 )
 
 func ConvertRGBToYCbCr(image image.Image, Y *[][]float64, Cb *[][]float64, Cr *[][]float64) {
@@ -14,6 +15,7 @@ func ConvertRGBToYCbCr(image image.Image, Y *[][]float64, Cb *[][]float64, Cr *[
 	width := image.Bounds().Dx()
 
 	// go across the whole image
+	fmt.Println("Starting YCbCr conversion...")
 	for y := range height {
 		for x := range width {
 			color := image.At(x, y)
@@ -33,18 +35,16 @@ func ConvertRGBToYCbCr(image image.Image, Y *[][]float64, Cb *[][]float64, Cr *[
 				RGBtoYCbCr[2][2]*float64(b) + 128
 		}
 	}
+	fmt.Println("Finished YCbCr conversion")
 }
 
 // the array that is generated is laid out as follows:
 // [width, height, Y, Y, Y, Y, .... Cb, Cb, Cb, Cb, .... Cr, Cr, Cr, Cr]
 func GetByteArray(image image.Image) ([]byte, error) {
-	var error error
 	var width int = image.Bounds().Dx()
 	var height int = image.Bounds().Dy()
-	if width == 0 || height == 0 {
-		fmt.Println("Invalid image: height or width is 0.")
-		return nil, error
-	}
+
+	fmt.Printf("Dimensions: %d x %d\n", width, height)
 
 	numPixels := width * height
 
@@ -55,6 +55,7 @@ func GetByteArray(image image.Image) ([]byte, error) {
 
 	// + 4 for storing width and height (least & most significant byte)
 	var ycbcr = make([]byte, int(float64(numPixels)*subsampleOffset+2+4))
+	fmt.Printf("Created byte array of size %d\n", len(ycbcr))
 
 	// for some reason this is how to initialize 2D arrays? gross!
 	Y := make([][]float64, height)
@@ -85,42 +86,48 @@ func GetByteArray(image image.Image) ([]byte, error) {
 	PutChannelInByteArray(&i, width, height, &Y, &ycbcr)
 	PutChannelInByteArray(&i, width/2, height/2, &Cb, &ycbcr)
 	PutChannelInByteArray(&i, width/2, height/2, &Cr, &ycbcr)
+	fmt.Println("Filled the byte array")
 
 	var blocks []Block = GetBlocks(ycbcr)
 
 	// this is just so beautiful i love Go
+	fmt.Println("Starting DCT and Quantization")
 	for _, block := range blocks {
 		if len(block.Matrix) != 0 {
 			DCT(&block.Matrix)
+			Quantize(block.channel, &block.Matrix)
 		}
 	}
 
+	fmt.Println("Finished DCT and Quantization")
 	return ycbcr, nil
 }
 
-type Block struct {
-	Matrix [][]float64
+func Quantize(channel string, block *[][]float64) {
+	for y := range 8 {
+		for x := range 8 {
+			if channel == "Y" {
+				(*block)[x][y] = math.Round((*block)[x][y] / Luminance[x][y])
+			} else {
+				(*block)[x][y] = math.Round((*block)[x][y] / Chrominance[x][y])
+			}
+		}
+	}
 }
 
 func GetBlocks(ycbcr []byte) []Block {
 	// 4 for the width/height, / 64 for block size
 	size := int((len(ycbcr))/64 + 4)
-	var blocks = make([]Block, size)
-	j := 0
-	i := 4
-	for i < len(ycbcr) {
-		blocks[j] = GetBlock(&i, ycbcr, "y")
-		j++
-	}
-	return blocks
-}
+	fmt.Printf("Creating %d 8x8 blocks from the byte array\n", size)
 
-func createEmptyBlock() *Block {
-	block := Block{Matrix: make([][]float64, 8)}
-	for j := range 8 {
-		block.Matrix[j] = make([]float64, 8)
+	var blocks = make([]Block, size)
+	i := 4
+	for j := range blocks {
+		blocks[j] = GetBlock(&i, ycbcr, "Y")
 	}
-	return &block
+
+	fmt.Println("Finished creating blocks")
+	return blocks
 }
 
 func GetBlock(i *int, ycbcr []byte, channel string) Block {
@@ -131,13 +138,13 @@ func GetBlock(i *int, ycbcr []byte, channel string) Block {
 	height := int(ycbcr[2]<<8 | ycbcr[3])
 	size := width * height
 
-	var block *Block = createEmptyBlock()
+	var block *Block = createEmptyBlock(channel)
 
 	for y := range 8 {
 		for x := range 8 {
 			if (*i) >= len(ycbcr) || ((*i) >= size && channel == "Y") {
 				block.Matrix[x][y] = 0
-			} else {
+			} else { // cbcr
 				// 99% sure this conversion from byte to float64 doesn't work but we'll find out later.!!
 				block.Matrix[x][y] = float64(ycbcr[(*i)])
 				(*i)++
@@ -149,7 +156,6 @@ func GetBlock(i *int, ycbcr []byte, channel string) Block {
 }
 
 func PutChannelInByteArray(i *int, width int, height int, channel *[][]float64, ycbcr *[]byte) {
-	var error error
 	for y := range height {
 		for x := range width {
 			// kill me
@@ -161,6 +167,7 @@ func PutChannelInByteArray(i *int, width int, height int, channel *[][]float64, 
 
 // 4:2:0
 func ChromaSubsample(width int, height int, channel *[][]float64) {
+	fmt.Println("Starting subsample (4:2:0)...")
 	temp := make([][]float64, height/2)
 	for i := range temp {
 		temp[i] = make([]float64, width)
@@ -170,5 +177,6 @@ func ChromaSubsample(width int, height int, channel *[][]float64) {
 			temp[x][y] = (*channel)[x*2][y*2]
 		}
 	}
+	fmt.Println("Finished subsample")
 	*channel = temp
 }
