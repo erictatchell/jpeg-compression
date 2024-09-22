@@ -16,21 +16,21 @@ func ConvertRGBToYCbCr(image image.Image, Y *[][]float64, Cb *[][]float64, Cr *[
 
 	// go across the whole image
 	fmt.Println("Starting YCbCr conversion...")
-	for y := range height {
-		for x := range width {
-			color := image.At(x, y)
+	for r := range height {
+		for c := range width {
+			color := image.At(r, c)
 			r, g, b, _ := color.RGBA()
 
 			// these formulas are from my multimedia textbook i cant remember which one oops
-			(*Y)[y][x] = RGBtoYCbCr[0][0]*float64(r) +
+			(*Y)[r][c] = RGBtoYCbCr[0][0]*float64(r) +
 				RGBtoYCbCr[0][1]*float64(g) +
 				RGBtoYCbCr[0][2]*float64(b)
 
-			(*Cb)[y][x] = RGBtoYCbCr[1][0]*float64(r) +
+			(*Cb)[r][c] = RGBtoYCbCr[1][0]*float64(r) +
 				RGBtoYCbCr[1][1]*float64(g) +
 				RGBtoYCbCr[1][2]*float64(b) + 128
 
-			(*Cr)[y][x] = RGBtoYCbCr[2][0]*float64(r) +
+			(*Cr)[r][c] = RGBtoYCbCr[2][0]*float64(r) +
 				RGBtoYCbCr[2][1]*float64(g) +
 				RGBtoYCbCr[2][2]*float64(b) + 128
 		}
@@ -104,12 +104,12 @@ func GetByteArray(image image.Image) ([]byte, error) {
 }
 
 func Quantize(channel string, block *[][]float64) {
-	for y := range 8 {
-		for x := range 8 {
+	for r := range 8 {
+		for c := range 8 {
 			if channel == "Y" {
-				(*block)[x][y] = math.Round((*block)[x][y] / Luminance[x][y])
+				(*block)[r][c] = math.Round((*block)[r][c] / Luminance[r][c])
 			} else {
-				(*block)[x][y] = math.Round((*block)[x][y] / Chrominance[x][y])
+				(*block)[r][c] = math.Round((*block)[x][y] / Chrominance[r][c])
 			}
 		}
 	}
@@ -140,13 +140,13 @@ func GetBlock(i *int, ycbcr []byte, channel string) Block {
 
 	var block *Block = createEmptyBlock(channel)
 
-	for y := range 8 {
-		for x := range 8 {
+	for r := range 8 {
+		for c := range 8 {
 			if (*i) >= len(ycbcr) || ((*i) >= size && channel == "Y") {
-				block.Matrix[x][y] = 0
+				block.Matrix[r][c] = 0
 			} else { // cbcr
 				// 99% sure this conversion from byte to float64 doesn't work but we'll find out later.!!
-				block.Matrix[x][y] = float64(ycbcr[(*i)])
+				block.Matrix[r][c] = float64(ycbcr[(*i)])
 				(*i)++
 			}
 		}
@@ -156,10 +156,10 @@ func GetBlock(i *int, ycbcr []byte, channel string) Block {
 }
 
 func PutChannelInByteArray(i *int, width int, height int, channel *[][]float64, ycbcr *[]byte) {
-	for y := range height {
-		for x := range width {
+	for r := range height {
+		for c := range width {
 			// kill me
-			(*ycbcr)[*i] = byte((*channel)[y][x])
+			(*ycbcr)[*i] = byte((*channel)[r][c])
 			*i++
 		}
 	}
@@ -170,11 +170,11 @@ func ChromaSubsample(width int, height int, channel *[][]float64) {
 	fmt.Println("Starting subsample (4:2:0)...")
 	temp := make([][]float64, height/2)
 	for i := range temp {
-		temp[i] = make([]float64, width)
+		temp[i] = make([]float64, width/2)
 	}
-	for y := range width / 2 {
-		for x := range height / 2 {
-			temp[x][y] = (*channel)[x*2][y*2]
+	for r := range height / 2 {
+		for c := range width / 2 {
+			temp[r][c] = (*channel)[r*2][c*2]
 		}
 	}
 	fmt.Println("Finished subsample")
