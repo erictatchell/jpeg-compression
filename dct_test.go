@@ -79,18 +79,3 @@ func TestDCT(t *testing.T) {
 	}
 
 }
-
-func formatMatrix(float bool, m [][]float64) string {
-	var s string
-	for i := 0; i < 8; i++ {
-		for j := 0; j < 8; j++ {
-			if float {
-				s += fmt.Sprintf("%.2f\t", m[i][j])
-			} else {
-				s += fmt.Sprintf("%d\t", int(m[i][j]))
-			}
-		}
-		s += "\n"
-	}
-	return s
-}

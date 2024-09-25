@@ -97,13 +97,29 @@ func GetByteArray(image image.Image) ([]byte, error) {
 	for _, block := range blocks {
 		if len(block.Matrix) != 0 {
 			DCT(&block.Matrix)
+			s := formatMatrix(true, block.Matrix)
+			fmt.Println(s)
 			Quantize(block.channel, &block.Matrix)
-			fmt.Println(block.Matrix)
 		}
 	}
 
 	fmt.Println("Finished DCT and Quantization")
 	return ycbcr, nil
+}
+
+func formatMatrix(float bool, m [][]float64) string {
+	var s string
+	for i := 0; i < 8; i++ {
+		for j := 0; j < 8; j++ {
+			if float {
+				s += fmt.Sprintf("%.2f\t", m[i][j])
+			} else {
+				s += fmt.Sprintf("%d\t", int(m[i][j]))
+			}
+		}
+		s += "\n"
+	}
+	return s
 }
 
 func Quantize(channel string, block *[][]float64) {
