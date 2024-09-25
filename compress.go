@@ -20,19 +20,22 @@ func ConvertRGBToYCbCr(image image.Image, Y *[][]float64, Cb *[][]float64, Cr *[
 		for x := range width {
 			color := image.At(x, y)
 			r, g, b, _ := color.RGBA()
+			red := uint8(r >> 8)
+			green := uint8(g >> 8)
+			blue := uint8(b >> 8)
 
 			// these formulas are from my multimedia textbook i cant remember which one oops
-			(*Y)[y][x] = RGBtoYCbCr[0][0]*float64(r) +
-				RGBtoYCbCr[0][1]*float64(g) +
-				RGBtoYCbCr[0][2]*float64(b)
+			(*Y)[y][x] = RGBtoYCbCr[0][0]*float64(red) +
+				RGBtoYCbCr[0][1]*float64(green) +
+				RGBtoYCbCr[0][2]*float64(blue)
 
-			(*Cb)[y][x] = RGBtoYCbCr[1][0]*float64(r) +
-				RGBtoYCbCr[1][1]*float64(g) +
-				RGBtoYCbCr[1][2]*float64(b) + 128
+			(*Cb)[y][x] = RGBtoYCbCr[1][0]*float64(red) +
+				RGBtoYCbCr[1][1]*float64(green) +
+				RGBtoYCbCr[1][2]*float64(blue) + 128
 
-			(*Cr)[y][x] = RGBtoYCbCr[2][0]*float64(r) +
-				RGBtoYCbCr[2][1]*float64(g) +
-				RGBtoYCbCr[2][2]*float64(b) + 128
+			(*Cr)[y][x] = RGBtoYCbCr[2][0]*float64(red) +
+				RGBtoYCbCr[2][1]*float64(green) +
+				RGBtoYCbCr[2][2]*float64(blue) + 128
 		}
 	}
 	fmt.Println("Finished YCbCr conversion")
@@ -92,7 +95,6 @@ func GetByteArray(image image.Image) ([]byte, error) {
 	var cbcrblocks []Block = GetBlocks("CbCr", ycbcr)
 	var blocks []Block = append(yblocks, cbcrblocks...)
 
-	// this is just so beautiful i love Go
 	fmt.Println("Starting DCT and Quantization")
 	for _, block := range blocks {
 		if len(block.Matrix) != 0 {

@@ -20,21 +20,13 @@ func openImageFromPath(imagePath string) (image.Image, error) {
 		return nil, err
 	}
 	defer imageFile.Close()
-	image, _, err := image.Decode(imageFile)
+	image, err := png.Decode(imageFile)
 	if err != nil {
-		fmt.Println("Generic decoding failed -- trying PNG")
+		fmt.Println("decoding failed")
+		return nil, err
 	} else {
 		return image, nil
 	}
-	imageFile.Seek(0, 0)
-
-	loadedImage, err := png.Decode(imageFile)
-	if err != nil {
-		fmt.Println("Unable to decode the image. Try a different file?")
-	}
-
-	return loadedImage, err
-
 }
 
 func check(e error) {
